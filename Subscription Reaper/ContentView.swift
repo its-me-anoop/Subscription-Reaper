@@ -13,29 +13,70 @@ struct ContentView: View {
     @Query private var items: [Item]
 
     var body: some View {
-        NavigationSplitView {
-            List {
-                ForEach(items) { item in
-                    NavigationLink {
-                        Text("Item at \(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))")
-                    } label: {
-                        Text(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))
+        NavigationStack {
+            ZStack {
+                AnimatedBackgroundView()
+                
+                ScrollView {
+                    VStack(spacing: 24) {
+                        // Dashboard Header
+                        DashCardView()
+                            .padding(.horizontal)
+                            .padding(.top, 8)
+                        
+                        // Subscriptions List
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text("Your Subscriptions")
+                                .font(.system(.title3, design: .rounded, weight: .bold))
+                                .padding(.horizontal)
+                            
+                            if items.isEmpty {
+                                ContentUnavailableView(
+                                    "No Subscriptions",
+                                    systemImage: "creditcard.and.123",
+                                    description: Text("Add your first subscription to track spending.")
+                                )
+                                .padding(.top, 40)
+                            } else {
+                                LazyVStack(spacing: 12) {
+                                    ForEach(items) { item in
+                                        HStack {
+                                            Text("Subscription")
+                                                .font(.system(.headline, design: .rounded))
+                                            Spacer()
+                                            Text(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .shortened))
+                                                .font(.system(.subheadline, design: .rounded))
+                                                .foregroundStyle(.secondary)
+                                        }
+                                        .padding()
+                                        .background(.ultraThinMaterial)
+                                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 16)
+                                                .strokeBorder(.white.opacity(0.1), lineWidth: 1)
+                                        )
+                                    }
+                                    .onDelete(perform: deleteItems)
+                                }
+                                .padding(.horizontal)
+                            }
+                        }
                     }
                 }
-                .onDelete(perform: deleteItems)
+                .scrollContentBackground(.hidden)
             }
+            .navigationTitle("Dashboard")
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(action: addItem) {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.title3)
+                    }
+                }
+                ToolbarItem(placement: .topBarLeading) {
                     EditButton()
                 }
-                ToolbarItem {
-                    Button(action: addItem) {
-                        Label("Add Item", systemImage: "plus")
-                    }
-                }
             }
-        } detail: {
-            Text("Select an item")
         }
     }
 
