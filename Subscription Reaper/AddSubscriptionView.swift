@@ -27,6 +27,7 @@ struct AddSubscriptionView: View {
     
     @State private var name: String = ""
     @State private var amount: Double = 0.0
+    @State private var amountString: String = ""
     @State private var currency: String = "USD"
     @State private var frequency: String = "Monthly"
     @State private var category: String = "Entertainment"
@@ -48,7 +49,7 @@ struct AddSubscriptionView: View {
     private let frequencies = ["Monthly", "Yearly", "Weekly"]
     private let categories = ["Entertainment", "Productivity", "Health", "Utilities", "Food", "Other"]
     private let currencies = ["USD", "EUR", "GBP", "JPY", "INR"]
-    private let icons = ["tv.fill", "music.note", "cloud.fill", "photo.fill", "gamecontroller.fill", "cart.fill", "heart.fill"]
+    @State private var icons = ["tv.fill", "music.note", "cloud.fill", "photo.fill", "gamecontroller.fill", "cart.fill", "heart.fill"]
     
     var body: some View {
         NavigationStack {
@@ -69,9 +70,12 @@ struct AddSubscriptionView: View {
                     HStack {
                         Text("Amount")
                         Spacer()
-                        TextField("Amount", value: $amount, format: .number)
+                        TextField("0.00", text: $amountString)
                             .keyboardType(.decimalPad)
                             .multilineTextAlignment(.trailing)
+                            .onChange(of: amountString) { oldValue, newValue in
+                                filterAmount(newValue)
+                            }
                     }
                     
                     Picker("Currency", selection: $currency) {
@@ -92,25 +96,40 @@ struct AddSubscriptionView: View {
                     DatePicker("Start Date", selection: $startDate, displayedComponents: .date)
                         .onChange(of: startDate) { updateNextBillingDate() }
                     
-                    DatePicker("Next Billing", selection: $nextBillingDate, displayedComponents: .date)
-                        .onChange(of: nextBillingDate) { isNextBillingManual = true }
+                    DatePicker("Next Billing", selection: Binding(
+                        get: { nextBillingDate },
+                        set: { newValue in
+                            nextBillingDate = newValue
+                            isNextBillingManual = true
+                        }
+                    ), displayedComponents: .date)
                 }
                 
                 Section("Style & Category") {
-                    Picker("Category", selection: $category) {
+                    Picker("Category", selection: Binding(
+                        get: { category },
+                        set: { newValue in
+                            category = newValue
+                            isCategoryManual = true
+                        }
+                    )) {
                         ForEach(categories, id: \.self) { cat in
                             Text(cat).tag(cat)
                         }
                     }
-                    .onChange(of: category) { isCategoryManual = true }
                     
-                    Picker("Icon", selection: $icon) {
+                    Picker("Icon", selection: Binding(
+                        get: { icon },
+                        set: { newValue in
+                            icon = newValue
+                            isIconManual = true
+                        }
+                    )) {
                         ForEach(icons, id: \.self) { iconName in
                             Image(systemName: iconName).tag(iconName)
                         }
                     }
                     .pickerStyle(.segmented)
-                    .onChange(of: icon) { isIconManual = true }
                 }
                 
                 Section("Notes") {
@@ -146,7 +165,14 @@ struct AddSubscriptionView: View {
     private func debouncePrediction(for newValue: String) {
         predictionTask?.cancel()
         
-        guard !newValue.isEmpty, newValue.count >= 2 else { return }
+        if newValue.isEmpty {
+            // Reset manual overrides if the name is cleared
+            isCategoryManual = false
+            isIconManual = false
+            return
+        }
+        
+        guard newValue.count >= 2 else { return }
         
         predictionTask = Task {
             try? await Task.sleep(nanoseconds: 500_000_000) // 0.5s debounce
@@ -175,11 +201,38 @@ struct AddSubscriptionView: View {
                     withAnimation { category = prediction.category }
                 }
                 if !isIconManual {
+                    // Update icon list if prediction is not in current list
+                    if !icons.contains(prediction.iconName) {
+                        icons.append(prediction.iconName)
+                    }
                     withAnimation { icon = prediction.iconName }
                 }
             }
         } catch {
             print("Prediction failed: \(error)")
+        }
+    }
+    
+    private func filterAmount(_ newValue: String) {
+        // Filter out everything except numbers and decimal point
+        var filtered = newValue.filter { "0123456789.".contains($0) }
+        
+        // Ensure only one decimal point
+        let components = filtered.split(separator: ".", omittingEmptySubsequences: false)
+        if components.count > 2 {
+            filtered = String(components[0]) + "." + components[1...].joined(separator: "")
+        }
+        
+        // Update the string state if it was changed by filtering
+        if filtered != newValue {
+            amountString = filtered
+        }
+        
+        // Sync with the double value
+        if let doubleValue = Double(filtered) {
+            amount = doubleValue
+        } else if filtered.isEmpty {
+            amount = 0.0
         }
     }
     
