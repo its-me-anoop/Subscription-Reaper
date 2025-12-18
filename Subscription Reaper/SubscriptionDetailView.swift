@@ -169,6 +169,7 @@ struct SubscriptionDetailView: View {
         .alert("Delete Subscription", isPresented: $showingDeleteAlert) {
             Button("Cancel", role: .cancel) { }
             Button("Delete", role: .destructive) {
+                NotificationManager.shared.cancelNotification(for: subscription)
                 modelContext.delete(subscription)
                 dismiss()
             }

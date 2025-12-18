@@ -26,6 +26,9 @@ struct Subscription_ReaperApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .onAppear {
+                    NotificationManager.shared.requestPermissions()
+                }
         }
         .modelContainer(sharedModelContainer)
     }

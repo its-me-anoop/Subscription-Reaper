@@ -389,6 +389,7 @@ struct AddSubscriptionView: View {
             sub.startDate = startDate
             sub.nextBillingDate = nextBillingDate
             sub.notes = notes.isEmpty ? nil : notes
+            NotificationManager.shared.scheduleNotification(for: sub)
         } else {
             let newSubscription = Subscription(
                 name: name,
@@ -405,6 +406,7 @@ struct AddSubscriptionView: View {
                 notes: notes.isEmpty ? nil : notes
             )
             modelContext.insert(newSubscription)
+            NotificationManager.shared.scheduleNotification(for: newSubscription)
         }
         dismiss()
     }
