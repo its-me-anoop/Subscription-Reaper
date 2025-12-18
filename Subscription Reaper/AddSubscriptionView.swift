@@ -25,6 +25,8 @@ struct AddSubscriptionView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     
+    var subscriptionToEdit: Subscription?
+    
     @State private var name: String = ""
     @State private var amount: Double = 0.0
     @State private var amountString: String = ""
@@ -136,8 +138,22 @@ struct AddSubscriptionView: View {
                     TextEditor(text: $notes)
                         .frame(minHeight: 100)
                 }
+                
+                if subscriptionToEdit != nil {
+                    Section {
+                        Button(role: .destructive) {
+                            deleteSubscription()
+                        } label: {
+                            HStack {
+                                Spacer()
+                                Text("Delete Subscription")
+                                Spacer()
+                            }
+                        }
+                    }
+                }
             }
-            .navigationTitle("New Subscription")
+            .navigationTitle(subscriptionToEdit == nil ? "New Subscription" : "Edit Subscription")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -157,7 +173,25 @@ struct AddSubscriptionView: View {
                 modelSession = LanguageModelSession()
             }
             .onAppear {
-                updateNextBillingDate()
+                if let sub = subscriptionToEdit {
+                    name = sub.name
+                    amount = sub.amount
+                    amountString = String(format: "%.2f", sub.amount)
+                    currency = sub.currency
+                    frequency = sub.frequency
+                    category = sub.category
+                    icon = sub.icon
+                    startDate = sub.startDate
+                    nextBillingDate = sub.nextBillingDate
+                    notes = sub.notes ?? ""
+                    
+                    // Since we are loading existing, we don't want to trigger auto-updates immediately
+                    isCategoryManual = true
+                    isIconManual = true
+                    isNextBillingManual = true
+                } else {
+                    updateNextBillingDate()
+                }
             }
         }
     }
@@ -268,18 +302,37 @@ struct AddSubscriptionView: View {
     }
     
     private func saveSubscription() {
-        let newSubscription = Subscription(
-            name: name,
-            amount: amount,
-            currency: currency,
-            frequency: frequency,
-            category: category,
-            icon: icon,
-            startDate: startDate,
-            nextBillingDate: nextBillingDate,
-            notes: notes.isEmpty ? nil : notes
-        )
-        modelContext.insert(newSubscription)
+        if let sub = subscriptionToEdit {
+            sub.name = name
+            sub.amount = amount
+            sub.currency = currency
+            sub.frequency = frequency
+            sub.category = category
+            sub.icon = icon
+            sub.startDate = startDate
+            sub.nextBillingDate = nextBillingDate
+            sub.notes = notes.isEmpty ? nil : notes
+        } else {
+            let newSubscription = Subscription(
+                name: name,
+                amount: amount,
+                currency: currency,
+                frequency: frequency,
+                category: category,
+                icon: icon,
+                startDate: startDate,
+                nextBillingDate: nextBillingDate,
+                notes: notes.isEmpty ? nil : notes
+            )
+            modelContext.insert(newSubscription)
+        }
+        dismiss()
+    }
+    
+    private func deleteSubscription() {
+        if let sub = subscriptionToEdit {
+            modelContext.delete(sub)
+        }
         dismiss()
     }
 }

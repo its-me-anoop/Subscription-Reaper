@@ -11,8 +11,7 @@ import SwiftData
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var subscriptions: [Subscription]
-
-    @State private var isShowingAddSubscription = false
+    @State private var subscriptionToEdit: Subscription?
 
     var totalMonthlyCost: Double {
         subscriptions.reduce(0) { total, sub in
@@ -89,6 +88,10 @@ struct ContentView: View {
                                             RoundedRectangle(cornerRadius: 16)
                                                 .strokeBorder(.white.opacity(0.1), lineWidth: 1)
                                         )
+                                        .contentShape(Rectangle())
+                                        .onTapGesture {
+                                            subscriptionToEdit = subscription
+                                        }
                                     }
                                     .onDelete(perform: deleteSubscriptions)
                                 }
@@ -102,7 +105,7 @@ struct ContentView: View {
             .navigationTitle("Dashboard")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button(action: { isShowingAddSubscription = true }) {
+                    Button(action: { subscriptionToEdit = Subscription() }) {
                         Image(systemName: "plus.circle.fill")
                             .font(.title3)
                     }
@@ -111,8 +114,8 @@ struct ContentView: View {
                     EditButton()
                 }
             }
-            .sheet(isPresented: $isShowingAddSubscription) {
-                AddSubscriptionView()
+            .sheet(item: $subscriptionToEdit) { subscription in
+                AddSubscriptionView(subscriptionToEdit: subscription.name.isEmpty && subscription.amount == 0 ? nil : subscription)
             }
         }
     }
