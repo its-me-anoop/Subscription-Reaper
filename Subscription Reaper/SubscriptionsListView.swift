@@ -12,9 +12,18 @@ struct SubscriptionsListView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Subscription.nextBillingDate) private var subscriptions: [Subscription]
     
-    @State private var searchText = ""
+    @Binding var externalSearchText: String
+    @State private var localSearchText = ""
     @State private var selectedCategory: String?
     @State private var subscriptionToEdit: Subscription?
+    
+    init(searchText: Binding<String>? = nil) {
+        _externalSearchText = searchText ?? .constant("")
+    }
+    
+    private var searchText: String {
+        externalSearchText.isEmpty ? localSearchText : externalSearchText
+    }
     
     let categories = ["All", "Entertainment", "Productivity", "Health", "Utilities", "Food", "Other"]
     
@@ -77,7 +86,7 @@ struct SubscriptionsListView: View {
             }
         }
         .navigationTitle("All Subscriptions")
-        .searchable(text: $searchText, prompt: "Search subscriptions")
+        .searchable(text: externalSearchText.isEmpty ? $localSearchText : $externalSearchText, prompt: "Search subscriptions")
         .sheet(item: $subscriptionToEdit) { subscription in
             AddSubscriptionView(subscriptionToEdit: subscription.name.isEmpty && subscription.amount == 0 ? nil : subscription)
         }

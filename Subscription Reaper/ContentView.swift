@@ -53,13 +53,15 @@ struct ContentView: View {
         }
     }
 
+    @State private var searchText = ""
+
     var body: some View {
-        ZStack(alignment: .bottom) {
-            TabView(selection: $selectedTab) {
+        TabView(selection: $selectedTab) {
+            Tab("Dashboard", systemImage: "house.fill", value: 0) {
                 dashboardView
-                    .tag(0)
-                    .toolbar(.hidden, for: .tabBar)
-                
+            }
+            
+            Tab("List", systemImage: "list.bullet", value: 1) {
                 NavigationStack {
                     SubscriptionsListView()
                         .toolbar {
@@ -68,30 +70,26 @@ struct ContentView: View {
                             }
                         }
                 }
-                .tag(1)
-                .toolbar(.hidden, for: .tabBar)
+            }
 
+            Tab("Settings", systemImage: "gearshape.fill", value: 2) {
                 NavigationStack {
                     SettingsView()
                 }
-                .tag(2)
-                .toolbar(.hidden, for: .tabBar)
+            }
 
+            Tab("Search", systemImage: "magnifyingglass", value: 3, role: .search) {
                 NavigationStack {
-                    SubscriptionsListView() // Using this as search view for now
+                    SubscriptionsListView(searchText: $searchText)
                         .toolbar {
                             ToolbarItem(placement: .topBarTrailing) {
                                 addButton
                             }
                         }
                 }
-                .tag(3)
-                .toolbar(.hidden, for: .tabBar)
             }
-            
-            // Custom Navigation Bar
-            customBottomBar
         }
+        .searchable(text: $searchText)
         .sheet(item: $subscriptionToEdit) { subscription in
             AddSubscriptionView(subscriptionToEdit: subscription.name.isEmpty && subscription.amount == 0 ? nil : subscription)
         }
@@ -116,103 +114,6 @@ struct ContentView: View {
                         .stroke(.blue.opacity(0.2), lineWidth: 0.5)
                 }
         }
-    }
-
-    private var customBottomBar: some View {
-        HStack(spacing: 12) {
-            // Main Tabs Group (Dashboard, List, Settings)
-            HStack(spacing: 0) {
-                ZStack(alignment: .leading) {
-                    // Liquid Morphing Highlight
-                    let highlightIndex = selectedTab < 3 ? selectedTab : -1
-                    if highlightIndex != -1 {
-                        if #available(iOS 18.0, *) {
-                            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .fill(.blue.opacity(0.15))
-                                .glassEffect(.clear.tint(.blue.opacity(0.3)).interactive(), in: .rect(cornerRadius: 16))
-                                .frame(width: 80, height: 48)
-                                .offset(x: CGFloat(highlightIndex) * 85 + 6)
-                                .animation(.spring(response: 0.4, dampingFraction: 0.7, blendDuration: 0), value: selectedTab)
-                        } else {
-                            Capsule()
-                                .fill(.blue.opacity(0.15))
-                                .frame(width: 80, height: 48)
-                                .offset(x: CGFloat(highlightIndex) * 85 + 6)
-                                .animation(.spring(response: 0.4, dampingFraction: 0.7, blendDuration: 0), value: selectedTab)
-                        }
-                    }
-                    
-                    HStack(spacing: 5) {
-                        tabButton(title: "Dashboard", icon: "house.fill", index: 0)
-                        tabButton(title: "List", icon: "list.bullet", index: 1)
-                        tabButton(title: "Settings", icon: "gearshape.fill", index: 2)
-                    }
-                    .padding(6)
-                }
-            }
-            .background(.ultraThinMaterial.opacity(0.8))
-            .clipShape(Capsule())
-            .overlay(
-                Capsule()
-                    .stroke(.white.opacity(0.15), lineWidth: 1)
-            )
-            .conditionalGlassEffect(cornerRadius: 32)
-            .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: 5)
-            
-            // Separated Search Button
-            Button(action: {
-                if selectedTab != 3 {
-                    hapticFeedback(.light)
-                    withAnimation {
-                        selectedTab = 3
-                    }
-                }
-            }) {
-                VStack(spacing: 4) {
-                    Image(systemName: "magnifyingglass")
-                        .font(.system(size: 20, weight: selectedTab == 3 ? .bold : .regular))
-                        .scaleEffect(selectedTab == 3 ? 1.1 : 1.0)
-                    Text("Search")
-                        .font(.system(size: 10, weight: selectedTab == 3 ? .bold : .medium))
-                }
-                .foregroundStyle(selectedTab == 3 ? .blue : .secondary)
-                .frame(width: 80, height: 60)
-                .background(.ultraThinMaterial.opacity(0.8))
-                .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .stroke(.white.opacity(0.15), lineWidth: 1)
-                }
-                .conditionalGlassEffect(cornerRadius: 20)
-                .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: 5)
-            }
-            .buttonStyle(.plain)
-        }
-        .padding(.horizontal, 20)
-        .padding(.bottom, 16)
-    }
-
-    private func tabButton(title: String, icon: String, index: Int) -> some View {
-        Button(action: {
-            if selectedTab != index {
-                hapticFeedback(.light)
-                withAnimation {
-                    selectedTab = index
-                }
-            }
-        }) {
-            VStack(spacing: 4) {
-                Image(systemName: icon)
-                    .font(.system(size: 20, weight: selectedTab == index ? .bold : .regular))
-                    .scaleEffect(selectedTab == index ? 1.1 : 1.0)
-                Text(title)
-                    .font(.system(size: 10, weight: selectedTab == index ? .bold : .medium))
-            }
-            .foregroundStyle(selectedTab == index ? .blue : .secondary)
-            .frame(width: 80, height: 48)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
     }
 
     private func hapticFeedback(_ style: UIImpactFeedbackGenerator.FeedbackStyle) {
