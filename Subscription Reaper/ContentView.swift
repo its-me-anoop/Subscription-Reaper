@@ -14,6 +14,10 @@ struct ContentView: View {
     @State private var subscriptionToEdit: Subscription?
     @State private var selectedTab = 0
     @State private var showingSettings = false
+    @AppStorage("defaultCurrency") private var defaultCurrency = "USD"
+    @AppStorage("isBudgetEnabled") private var isBudgetEnabled = false
+    @AppStorage("monthlyBudget") private var monthlyBudget: Double = 50.0
+    private var currencyService = CurrencyService.shared
 
     var upcomingSubscriptions: [Subscription] {
         Array(subscriptions.prefix(4))
@@ -21,16 +25,23 @@ struct ContentView: View {
 
     var totalMonthlyCost: Double {
         subscriptions.reduce(0) { total, sub in
-            if sub.frequency == "Monthly" {
-                return total + sub.amount
-            } else {
-                return total + (sub.amount / 12.0)
-            }
+            let monthlyAmount = sub.frequency == "Monthly" ? sub.amount : (sub.amount / 12.0)
+            let convertedAmount = currencyService.convert(monthlyAmount, from: sub.currency, to: defaultCurrency)
+            return total + convertedAmount
         }
     }
 
-    var commonCurrency: String {
-        subscriptions.first?.currency ?? "USD"
+    var dashboardTint: Color {
+        guard isBudgetEnabled && monthlyBudget > 0 else { return .blue }
+        
+        let percent = totalMonthlyCost / monthlyBudget
+        if percent > 1.0 {
+            return .red
+        } else if percent > 0.75 {
+            return .orange
+        } else {
+            return .blue
+        }
     }
 
     var greeting: String {
@@ -51,8 +62,30 @@ struct ContentView: View {
                 
                 NavigationStack {
                     SubscriptionsListView()
+                        .toolbar {
+                            ToolbarItem(placement: .topBarTrailing) {
+                                addButton
+                            }
+                        }
                 }
                 .tag(1)
+                .toolbar(.hidden, for: .tabBar)
+
+                NavigationStack {
+                    SettingsView()
+                }
+                .tag(2)
+                .toolbar(.hidden, for: .tabBar)
+
+                NavigationStack {
+                    SubscriptionsListView() // Using this as search view for now
+                        .toolbar {
+                            ToolbarItem(placement: .topBarTrailing) {
+                                addButton
+                            }
+                        }
+                }
+                .tag(3)
                 .toolbar(.hidden, for: .tabBar)
             }
             
@@ -62,65 +95,98 @@ struct ContentView: View {
         .sheet(item: $subscriptionToEdit) { subscription in
             AddSubscriptionView(subscriptionToEdit: subscription.name.isEmpty && subscription.amount == 0 ? nil : subscription)
         }
-        .sheet(isPresented: $showingSettings) {
-            SettingsView()
+    }
+
+    private var addButton: some View {
+        Button(action: {
+            hapticFeedback(.medium)
+            subscriptionToEdit = Subscription()
+        }) {
+            Image(systemName: "plus")
+                .font(.system(size: 18, weight: .bold))
+                .foregroundStyle(.blue)
+                .padding(8)
+                .background {
+                    Circle()
+                        .fill(.blue.opacity(0.1))
+                        .conditionalGlassEffect(cornerRadius: 20)
+                }
+                .overlay {
+                    Circle()
+                        .stroke(.blue.opacity(0.2), lineWidth: 0.5)
+                }
         }
     }
 
     private var customBottomBar: some View {
-        HStack(spacing: 0) {
-            // Main Tabs Group
-            ZStack(alignment: .leading) {
-                // Liquid Morphing Highlight
-                Capsule()
-                    .fill(.blue.opacity(0.15))
-                    .frame(width: 80, height: 48)
-                    .offset(x: CGFloat(selectedTab) * 85 + 6) // Adjust based on button width + spacing
-                    .animation(.spring(response: 0.4, dampingFraction: 0.7, blendDuration: 0), value: selectedTab)
-                
-                HStack(spacing: 5) {
-                    tabButton(title: "Dashboard", icon: "house.fill", index: 0)
-                    tabButton(title: "List", icon: "list.bullet", index: 1)
+        HStack(spacing: 12) {
+            // Main Tabs Group (Dashboard, List, Settings)
+            HStack(spacing: 0) {
+                ZStack(alignment: .leading) {
+                    // Liquid Morphing Highlight
+                    let highlightIndex = selectedTab < 3 ? selectedTab : -1
+                    if highlightIndex != -1 {
+                        if #available(iOS 18.0, *) {
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .fill(.blue.opacity(0.15))
+                                .glassEffect(.clear.tint(.blue.opacity(0.3)).interactive(), in: .rect(cornerRadius: 16))
+                                .frame(width: 80, height: 48)
+                                .offset(x: CGFloat(highlightIndex) * 85 + 6)
+                                .animation(.spring(response: 0.4, dampingFraction: 0.7, blendDuration: 0), value: selectedTab)
+                        } else {
+                            Capsule()
+                                .fill(.blue.opacity(0.15))
+                                .frame(width: 80, height: 48)
+                                .offset(x: CGFloat(highlightIndex) * 85 + 6)
+                                .animation(.spring(response: 0.4, dampingFraction: 0.7, blendDuration: 0), value: selectedTab)
+                        }
+                    }
+                    
+                    HStack(spacing: 5) {
+                        tabButton(title: "Dashboard", icon: "house.fill", index: 0)
+                        tabButton(title: "List", icon: "list.bullet", index: 1)
+                        tabButton(title: "Settings", icon: "gearshape.fill", index: 2)
+                    }
+                    .padding(6)
                 }
-                .padding(6)
             }
-            .background(.ultraThinMaterial)
+            .background(.ultraThinMaterial.opacity(0.8))
             .clipShape(Capsule())
             .overlay(
                 Capsule()
                     .stroke(.white.opacity(0.15), lineWidth: 1)
             )
+            .conditionalGlassEffect(cornerRadius: 32)
             .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: 5)
             
-            Spacer()
-            
-            // Detached Floating Action Button
-            Button(action: { 
-                hapticFeedback(.medium)
-                subscriptionToEdit = Subscription() 
-            }) {
-                ZStack {
-                    Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: [.blue, .blue.opacity(0.8)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .overlay(
-                            Circle()
-                                .stroke(.white.opacity(0.3), lineWidth: 1)
-                        )
-                    
-                    Image(systemName: "plus")
-                        .font(.system(size: 24, weight: .bold))
-                        .foregroundStyle(.white)
+            // Separated Search Button
+            Button(action: {
+                if selectedTab != 3 {
+                    hapticFeedback(.light)
+                    withAnimation {
+                        selectedTab = 3
+                    }
                 }
-                .frame(width: 58, height: 58)
-                .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 4)
+            }) {
+                VStack(spacing: 4) {
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 20, weight: selectedTab == 3 ? .bold : .regular))
+                        .scaleEffect(selectedTab == 3 ? 1.1 : 1.0)
+                    Text("Search")
+                        .font(.system(size: 10, weight: selectedTab == 3 ? .bold : .medium))
+                }
+                .foregroundStyle(selectedTab == 3 ? .blue : .secondary)
+                .frame(width: 80, height: 60)
+                .background(.ultraThinMaterial.opacity(0.8))
+                .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                        .stroke(.white.opacity(0.15), lineWidth: 1)
+                }
+                .conditionalGlassEffect(cornerRadius: 20)
+                .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: 5)
             }
-            .buttonStyle(ScaleButtonStyle())
+            .buttonStyle(.plain)
         }
         .padding(.horizontal, 20)
         .padding(.bottom, 16)
@@ -164,7 +230,8 @@ struct ContentView: View {
                         // Dashboard Header
                         DashCardView(
                             amount: totalMonthlyCost,
-                            currency: commonCurrency
+                            currency: defaultCurrency,
+                            tint: dashboardTint
                         )
                             .padding(.horizontal)
                             .padding(.top, 8)
@@ -213,10 +280,7 @@ struct ContentView: View {
             .navigationTitle(greeting)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button(action: { showingSettings = true }) {
-                        Image(systemName: "gearshape.fill")
-                            .font(.title3)
-                    }
+                    addButton
                 }
             }
         }
@@ -228,6 +292,18 @@ struct ContentView: View {
                 let subscription = upcomingSubscriptions[index]
                 modelContext.delete(subscription)
             }
+        }
+    }
+}
+
+// MARK: - Extension for Glass Effect
+extension View {
+    @ViewBuilder
+    func conditionalGlassEffect(cornerRadius: CGFloat = 24) -> some View {
+        if #available(iOS 18.0, *) {
+            self.glassEffect(.clear.tint(.white.opacity(0.1)).interactive(), in: .rect(cornerRadius: cornerRadius))
+        } else {
+            self
         }
     }
 }

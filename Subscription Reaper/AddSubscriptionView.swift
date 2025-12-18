@@ -50,7 +50,7 @@ struct AddSubscriptionView: View {
     
     private let frequencies = ["Monthly", "Yearly", "Weekly"]
     private let categories = ["Entertainment", "Productivity", "Health", "Utilities", "Food", "Other"]
-    private let currencies = ["USD", "EUR", "GBP", "JPY", "INR"]
+    private let currencies = ["USD", "EUR", "GBP", "JPY", "INR", "AUD", "CAD"]
     @State private var icons = ["tv.fill", "music.note", "cloud.fill", "photo.fill", "gamecontroller.fill", "cart.fill", "heart.fill"]
     
     var body: some View {
