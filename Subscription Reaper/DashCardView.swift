@@ -15,6 +15,8 @@ struct DashCardView: View {
     var currency: String = "USD"
     var icon: String = "creditcard.fill"
     var tint: Color = .blue
+    
+    @State private var displayAmount: Double = 0
 
     var body: some View {
         HStack(alignment: .top, spacing: 0) {
@@ -43,7 +45,7 @@ struct DashCardView: View {
 
                 // Amount Section
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(amount, format: .currency(code: currency))
+                    Text(displayAmount, format: .currency(code: currency))
                         .font(.system(size: 40, weight: .black, design: .rounded))
                         .monospacedDigit()
                         .contentTransition(.numericText())
@@ -102,12 +104,44 @@ struct DashCardView: View {
         .padding(28)
         .frame(height: 160)
         .liquidGlassCard(tint: tint, cornerRadius: 32, id: "dash_card_main", in: glassNamespace)
-        .animation(.spring(response: 0.6, dampingFraction: 0.8), value: amount)
+        .animation(.spring(response: 0.6, dampingFraction: 0.8), value: displayAmount)
+        .task(id: amount) {
+            await animateAmountUpdate()
+        }
+    }
+    
+    private func animateAmountUpdate() async {
+        let start = displayAmount
+        let target = amount
+        
+        // If they are the same or start is 0, just set it directly on first appear
+        if start == target { return }
+        if start == 0 {
+            displayAmount = target
+            return
+        }
+        
+        let duration: Double = 0.5
+        let steps = 20
+        let interval = duration / Double(steps)
+        
+        let generator = UIImpactFeedbackGenerator(style: .light)
+        generator.prepare()
+        
+        for i in 1...steps {
+            withAnimation(.linear(duration: interval)) {
+                displayAmount = start + (target - start) * (Double(i) / Double(steps))
+            }
+            generator.impactOccurred(intensity: 0.3)
+            try? await Task.sleep(nanoseconds: UInt64(interval * 1_000_000_000))
+        }
+        
+        displayAmount = target
     }
 
     // Compute an annual estimate by parsing the monthly amount string
     private func annualEstimateString() -> String? {
-        let annual = amount * 12.0
+        let annual = displayAmount * 12.0
         return annual.formatted(.currency(code: currency).precision(.fractionLength(0)))
     }
 }
