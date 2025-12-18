@@ -10,7 +10,7 @@ import SwiftData
 import FoundationModels
 
 @Generable
-struct SubscriptionPrediction: Equatable, Generable {
+struct SubscriptionPrediction: Equatable {
     @Guide(description: "The most likely official name of the subscription service.")
     let name: String
     
