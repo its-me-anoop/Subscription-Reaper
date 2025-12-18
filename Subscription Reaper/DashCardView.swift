@@ -44,6 +44,8 @@ struct DashCardView: View {
                 VStack(alignment: .leading, spacing: 6) {
                     Text(amount)
                         .font(.system(size: 40, weight: .black, design: .rounded))
+                        .monospacedDigit()
+                        .contentTransition(.numericText())
                         .foregroundStyle(.primary)
                         .minimumScaleFactor(0.8)
                         .lineLimit(1)
@@ -54,6 +56,8 @@ struct DashCardView: View {
                                 .font(.system(size: 14, weight: .bold))
                             Text("\(annual) / year")
                                 .font(.system(.subheadline, design: .rounded, weight: .semibold))
+                                .monospacedDigit()
+                                .contentTransition(.numericText())
                         }
                         .foregroundStyle(.primary.opacity(0.6))
                     }
@@ -97,6 +101,7 @@ struct DashCardView: View {
         .padding(28)
         .frame(height: 160)
         .liquidGlassCard(tint: tint, cornerRadius: 32, id: "dash_card_main", in: glassNamespace)
+        .animation(.spring(response: 0.6, dampingFraction: 0.8), value: amount)
     }
 
     // Compute an annual estimate by parsing the monthly amount string
