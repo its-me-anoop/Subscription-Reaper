@@ -11,7 +11,8 @@ struct DashCardView: View {
     @Namespace private var glassNamespace
     var title: String = "Upcoming Total"
     var subtitle: String? = "Next 30 Days"
-    var amount: String = "$124.99"
+    var amount: Double = 124.99
+    var currency: String = "USD"
     var icon: String = "creditcard.fill"
     var tint: Color = .blue
 
@@ -42,7 +43,7 @@ struct DashCardView: View {
 
                 // Amount Section
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(amount)
+                    Text(amount, format: .currency(code: currency))
                         .font(.system(size: 40, weight: .black, design: .rounded))
                         .monospacedDigit()
                         .contentTransition(.numericText())
@@ -106,30 +107,8 @@ struct DashCardView: View {
 
     // Compute an annual estimate by parsing the monthly amount string
     private func annualEstimateString() -> String? {
-        let trimmed = amount.trimmingCharacters(in: .whitespacesAndNewlines)
-
-        let symbolPrefix = String(trimmed.prefix { !$0.isNumber && $0 != "." && $0 != "," })
-
-        var numericString = trimmed
-        let hasDot = numericString.contains(".")
-        let hasComma = numericString.contains(",")
-        if hasDot && hasComma {
-            numericString = numericString.replacingOccurrences(of: ",", with: "")
-        } else if hasComma && !hasDot {
-            numericString = numericString.replacingOccurrences(of: ",", with: ".")
-        }
-        numericString = numericString.filter { ("0123456789." as String).contains($0) }
-
-        guard let value = Double(numericString) else { return nil }
-        let annual = value * 12.0
-
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        if !symbolPrefix.isEmpty { formatter.currencySymbol = symbolPrefix }
-        formatter.maximumFractionDigits = 0
-        formatter.minimumFractionDigits = 0
-
-        return formatter.string(from: NSNumber(value: annual))
+        let annual = amount * 12.0
+        return annual.formatted(.currency(code: currency).precision(.fractionLength(0)))
     }
 }
 
@@ -209,12 +188,14 @@ private extension View {
             DashCardView()
             DashCardView(title: "Active Subscriptions",
                          subtitle: "Currently",
-                         amount: "£12.99",
+                         amount: 12.99,
+                         currency: "GBP",
                          icon: "list.bullet.rectangle.portrait.fill",
                          tint: .red)
             DashCardView(title: "Annual Savings",
                          subtitle: "Potential",
-                         amount: "$420.00",
+                         amount: 420.00,
+                         currency: "USD",
                          icon: "leaf.fill",
                          tint: .purple)
         }

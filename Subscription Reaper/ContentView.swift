@@ -14,6 +14,20 @@ struct ContentView: View {
 
     @State private var isShowingAddSubscription = false
 
+    var totalMonthlyCost: Double {
+        subscriptions.reduce(0) { total, sub in
+            if sub.frequency == "Monthly" {
+                return total + sub.amount
+            } else {
+                return total + (sub.amount / 12.0)
+            }
+        }
+    }
+
+    var commonCurrency: String {
+        subscriptions.first?.currency ?? "USD"
+    }
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -22,7 +36,10 @@ struct ContentView: View {
                 ScrollView {
                     VStack(spacing: 24) {
                         // Dashboard Header
-                        DashCardView()
+                        DashCardView(
+                            amount: totalMonthlyCost,
+                            currency: commonCurrency
+                        )
                             .padding(.horizontal)
                             .padding(.top, 8)
                         
