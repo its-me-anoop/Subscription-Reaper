@@ -12,6 +12,8 @@ struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var subscriptions: [Subscription]
 
+    @State private var isShowingAddSubscription = false
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -83,7 +85,7 @@ struct ContentView: View {
             .navigationTitle("Dashboard")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button(action: addSubscription) {
+                    Button(action: { isShowingAddSubscription = true }) {
                         Image(systemName: "plus.circle.fill")
                             .font(.title3)
                     }
@@ -92,25 +94,9 @@ struct ContentView: View {
                     EditButton()
                 }
             }
-        }
-    }
-
-    private func addSubscription() {
-        withAnimation {
-            let samples = [
-                ("Netflix", 15.99, "tv.fill", Color.red),
-                ("Spotify", 9.99, "music.note", Color.green),
-                ("iCloud", 2.99, "cloud.fill", Color.blue),
-                ("Adobe CC", 52.99, "photo.fill", Color.purple)
-            ]
-            let sample = samples.randomElement()!
-            let newSubscription = Subscription(
-                name: sample.0,
-                amount: sample.1,
-                icon: sample.2,
-                nextBillingDate: Calendar.current.date(byAdding: .day, value: Int.random(in: 1...30), to: Date()) ?? Date()
-            )
-            modelContext.insert(newSubscription)
+            .sheet(isPresented: $isShowingAddSubscription) {
+                AddSubscriptionView()
+            }
         }
     }
 
