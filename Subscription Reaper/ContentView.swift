@@ -10,7 +10,7 @@ import SwiftData
 
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query private var items: [Item]
+    @Query private var subscriptions: [Subscription]
 
     var body: some View {
         NavigationStack {
@@ -30,7 +30,7 @@ struct ContentView: View {
                                 .font(.system(.title3, design: .rounded, weight: .bold))
                                 .padding(.horizontal)
                             
-                            if items.isEmpty {
+                            if subscriptions.isEmpty {
                                 ContentUnavailableView(
                                     "No Subscriptions",
                                     systemImage: "creditcard.and.123",
@@ -39,14 +39,29 @@ struct ContentView: View {
                                 .padding(.top, 40)
                             } else {
                                 LazyVStack(spacing: 12) {
-                                    ForEach(items) { item in
-                                        HStack {
-                                            Text("Subscription")
-                                                .font(.system(.headline, design: .rounded))
+                                    ForEach(subscriptions) { subscription in
+                                        HStack(spacing: 16) {
+                                            // Icon Placeholder
+                                            Image(systemName: subscription.icon)
+                                                .font(.title2)
+                                                .foregroundStyle(.blue)
+                                                .frame(width: 44, height: 44)
+                                                .background(.blue.opacity(0.1))
+                                                .clipShape(Circle())
+                                            
+                                            VStack(alignment: .leading, spacing: 4) {
+                                                Text(subscription.name)
+                                                    .font(.system(.headline, design: .rounded))
+                                                Text(subscription.nextBillingDate, format: .dateTime.month().day())
+                                                    .font(.system(.subheadline, design: .rounded))
+                                                    .foregroundStyle(.secondary)
+                                            }
+                                            
                                             Spacer()
-                                            Text(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .shortened))
-                                                .font(.system(.subheadline, design: .rounded))
-                                                .foregroundStyle(.secondary)
+                                            
+                                            Text(subscription.amount, format: .currency(code: subscription.currency))
+                                                .font(.system(.headline, design: .rounded))
+                                                .foregroundStyle(.primary)
                                         }
                                         .padding()
                                         .background(.ultraThinMaterial)
@@ -56,7 +71,7 @@ struct ContentView: View {
                                                 .strokeBorder(.white.opacity(0.1), lineWidth: 1)
                                         )
                                     }
-                                    .onDelete(perform: deleteItems)
+                                    .onDelete(perform: deleteSubscriptions)
                                 }
                                 .padding(.horizontal)
                             }
@@ -68,7 +83,7 @@ struct ContentView: View {
             .navigationTitle("Dashboard")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button(action: addItem) {
+                    Button(action: addSubscription) {
                         Image(systemName: "plus.circle.fill")
                             .font(.title3)
                     }
@@ -80,17 +95,29 @@ struct ContentView: View {
         }
     }
 
-    private func addItem() {
+    private func addSubscription() {
         withAnimation {
-            let newItem = Item(timestamp: Date())
-            modelContext.insert(newItem)
+            let samples = [
+                ("Netflix", 15.99, "tv.fill", Color.red),
+                ("Spotify", 9.99, "music.note", Color.green),
+                ("iCloud", 2.99, "cloud.fill", Color.blue),
+                ("Adobe CC", 52.99, "photo.fill", Color.purple)
+            ]
+            let sample = samples.randomElement()!
+            let newSubscription = Subscription(
+                name: sample.0,
+                amount: sample.1,
+                icon: sample.2,
+                nextBillingDate: Calendar.current.date(byAdding: .day, value: Int.random(in: 1...30), to: Date()) ?? Date()
+            )
+            modelContext.insert(newSubscription)
         }
     }
 
-    private func deleteItems(offsets: IndexSet) {
+    private func deleteSubscriptions(offsets: IndexSet) {
         withAnimation {
             for index in offsets {
-                modelContext.delete(items[index])
+                modelContext.delete(subscriptions[index])
             }
         }
     }
@@ -98,5 +125,5 @@ struct ContentView: View {
 
 #Preview {
     ContentView()
-        .modelContainer(for: Item.self, inMemory: true)
+        .modelContainer(for: Subscription.self, inMemory: true)
 }
