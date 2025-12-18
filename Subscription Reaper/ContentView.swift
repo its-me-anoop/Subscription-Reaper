@@ -89,7 +89,7 @@ struct ContentView: View {
                 }
             }
         }
-        .searchable(text: $searchText)
+        
         .sheet(item: $subscriptionToEdit) { subscription in
             AddSubscriptionView(subscriptionToEdit: subscription.name.isEmpty && subscription.amount == 0 ? nil : subscription)
         }
@@ -104,15 +104,7 @@ struct ContentView: View {
                 .font(.system(size: 18, weight: .bold))
                 .foregroundStyle(.blue)
                 .padding(8)
-                .background {
-                    Circle()
-                        .fill(.blue.opacity(0.1))
-                        .conditionalGlassEffect(cornerRadius: 20)
-                }
-                .overlay {
-                    Circle()
-                        .stroke(.blue.opacity(0.2), lineWidth: 0.5)
-                }
+                
         }
     }
 
