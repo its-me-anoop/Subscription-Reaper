@@ -10,7 +10,7 @@ import SwiftData
 import FoundationModels
 
 @Generable
-struct SubscriptionPrediction: Equatable {
+struct SubscriptionPrediction: Equatable, Generable {
     @Guide(description: "The most likely official name of the subscription service.")
     let name: String
     
@@ -134,11 +134,8 @@ struct AddSubscriptionView: View {
                 }
             }
             .task {
-                do {
-                    modelSession = try await LanguageModelSession()
-                } catch {
-                    print("Failed to initialize LanguageModelSession: \(error)")
-                }
+                // Initializing the session (synchronous in this environment)
+                modelSession = LanguageModelSession()
             }
             .onAppear {
                 updateNextBillingDate()
@@ -166,9 +163,10 @@ struct AddSubscriptionView: View {
         defer { isPredicting = false }
         
         do {
-            let response = try await session.generateResponse(generating: SubscriptionPrediction.self) {
-                "Predict the standard service name, category, and SF Symbol icon for this subscription input: \(query)"
-            }
+            let response = try await session.respond(
+                to: "Predict the standard service name, category, and SF Symbol icon for this subscription input: \(query)",
+                generating: SubscriptionPrediction.self
+            )
             
             let prediction = response.content
             
@@ -179,8 +177,6 @@ struct AddSubscriptionView: View {
                 if !isIconManual {
                     withAnimation { icon = prediction.iconName }
                 }
-                // Optionally update name if it matches well, but keep user input for better UX
-                // name = prediction.name
             }
         } catch {
             print("Prediction failed: \(error)")
