@@ -24,16 +24,31 @@ struct SubscriptionRowView: View {
     
     var body: some View {
         HStack(spacing: 16) {
-            // Icon
-            Image(systemName: subscription.icon)
-                .font(.title2)
-                .foregroundStyle(dueTint)
+            // Icon or Logo
+            if let logoUrl = subscription.logoUrl, let url = URL(string: logoUrl) {
+                AsyncImage(url: url) { image in
+                    image.resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 32, height: 32)
+                } placeholder: {
+                    Circle()
+                        .fill(dueTint.opacity(0.1))
+                        .frame(width: 44, height: 44)
+                }
                 .frame(width: 44, height: 44)
-                .background(dueTint.opacity(0.1))
+                .background(.ultraThinMaterial)
                 .clipShape(Circle())
+            } else {
+                Image(systemName: subscription.icon)
+                    .font(.title2)
+                    .foregroundStyle(dueTint)
+                    .frame(width: 44, height: 44)
+                    .background(dueTint.opacity(0.1))
+                    .clipShape(Circle())
+            }
             
             VStack(alignment: .leading, spacing: 4) {
-                Text(subscription.name)
+                Text(subscription.fullServiceName ?? subscription.name)
                     .font(.system(.headline, design: .rounded))
                 
                 HStack(spacing: 4) {

@@ -71,13 +71,14 @@ struct SubscriptionsListView: View {
                 } else {
                     List {
                         ForEach(filteredSubscriptions) { subscription in
-                            SubscriptionRowView(subscription: subscription)
-                                .listRowBackground(Color.clear)
-                                .listRowSeparator(.hidden)
-                                .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
-                                .onTapGesture {
-                                    subscriptionToEdit = subscription
-                                }
+                            NavigationLink {
+                                SubscriptionDetailView(subscription: subscription)
+                            } label: {
+                                SubscriptionRowView(subscription: subscription)
+                            }
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
+                            .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
                         }
                     }
                     .listStyle(.plain)

@@ -13,7 +13,17 @@ struct SettingsView: View {
     @AppStorage("isBudgetEnabled") private var isBudgetEnabled = false
     @AppStorage("monthlyBudget") private var monthlyBudget: Double = 50.0
     @AppStorage("annualBudget") private var annualBudget: Double = 600.0
+    @AppStorage("selectedCountry") private var selectedCountry = "US"
     
+    let countries = [
+        "US": "United States",
+        "UK": "United Kingdom",
+        "IN": "India",
+        "EU": "Europe",
+        "AU": "Australia",
+        "CA": "Canada",
+        "JP": "Japan"
+    ]
     var body: some View {
         NavigationStack {
             ZStack {
@@ -24,6 +34,13 @@ struct SettingsView: View {
                         Picker("Default Currency", selection: $defaultCurrency) {
                             ForEach(["USD", "EUR", "GBP", "INR", "JPY", "AUD", "CAD"], id: \.self) { currency in
                                 Text(currency).tag(currency)
+                            }
+                        }
+                        .listRowBackground(Color.white.opacity(0.1))
+                        
+                        Picker("Country", selection: $selectedCountry) {
+                            ForEach(countries.keys.sorted(), id: \.self) { code in
+                                Text(countries[code] ?? code).tag(code)
                             }
                         }
                         .listRowBackground(Color.white.opacity(0.1))

@@ -17,6 +17,9 @@ final class Subscription: Identifiable {
     var frequency: String // "Monthly", "Yearly"
     var category: String
     var icon: String // SF Symbol name
+    var logoUrl: String? // URL for service logo
+    var fullServiceName: String? // Official service name
+    var sourceId: String? // Watchmode-inspired unique source ID
     var startDate: Date
     var nextBillingDate: Date
     var notes: String?
@@ -29,6 +32,9 @@ final class Subscription: Identifiable {
         frequency: String = "Monthly",
         category: String = "General",
         icon: String = "creditcard.fill",
+        logoUrl: String? = nil,
+        fullServiceName: String? = nil,
+        sourceId: String? = nil,
         startDate: Date = Date(),
         nextBillingDate: Date = Date(),
         notes: String? = nil
@@ -40,6 +46,9 @@ final class Subscription: Identifiable {
         self.frequency = frequency
         self.category = category
         self.icon = icon
+        self.logoUrl = logoUrl
+        self.fullServiceName = fullServiceName
+        self.sourceId = sourceId
         self.startDate = startDate
         self.nextBillingDate = nextBillingDate
         self.notes = notes

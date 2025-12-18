@@ -157,10 +157,12 @@ struct ContentView: View {
                             } else {
                                 LazyVStack(spacing: 12) {
                                     ForEach(upcomingSubscriptions) { subscription in
-                                        SubscriptionRowView(subscription: subscription)
-                                            .onTapGesture {
-                                                subscriptionToEdit = subscription
-                                            }
+                                        NavigationLink {
+                                            SubscriptionDetailView(subscription: subscription)
+                                        } label: {
+                                            SubscriptionRowView(subscription: subscription)
+                                        }
+                                        .buttonStyle(.plain)
                                     }
                                 }
                                 .padding(.horizontal)

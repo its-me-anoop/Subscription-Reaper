@@ -24,6 +24,8 @@ struct SubscriptionPrediction: Equatable {
 struct AddSubscriptionView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
+    @AppStorage("defaultCurrency") private var defaultCurrency = "USD"
+    @AppStorage("selectedCountry") private var selectedCountry = "US"
     
     var subscriptionToEdit: Subscription?
     
@@ -37,12 +39,17 @@ struct AddSubscriptionView: View {
     @State private var startDate: Date = Date()
     @State private var nextBillingDate: Date = Date()
     @State private var notes: String = ""
+    @State private var logoUrl: String? = nil
+    @State private var fullServiceName: String? = nil
+    @State private var sourceId: String? = nil
     
     // Tracking manual overrides
     @State private var isCategoryManual = false
     @State private var isIconManual = false
     @State private var isNextBillingManual = false
     @State private var isPredicting = false
+    @State private var suggestedSources: [StreamingSource] = []
+    @State private var isLoadingSuggestions = false
     
     // Model Session
     @State private var modelSession: LanguageModelSession?
@@ -63,9 +70,51 @@ struct AddSubscriptionView: View {
                                 debouncePrediction(for: newValue)
                             }
                         
-                        if isPredicting {
+                        if isPredicting || isLoadingSuggestions {
                             ProgressView()
                                 .controlSize(.small)
+                        }
+                    }
+                    
+                    if !suggestedSources.isEmpty {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 12) {
+                                ForEach(suggestedSources) { source in
+                                    Button {
+                                        selectSource(source)
+                                    } label: {
+                                        VStack(alignment: .leading, spacing: 6) {
+                                            if let url = URL(string: source.logoUrl) {
+                                                AsyncImage(url: url) { image in
+                                                    image.resizable()
+                                                        .aspectRatio(contentMode: .fit)
+                                                        .frame(height: 20)
+                                                } placeholder: {
+                                                    ProgressView().controlSize(.mini)
+                                                }
+                                            } else {
+                                                Image(systemName: source.defaultIcon)
+                                                    .font(.caption)
+                                            }
+                                            
+                                            Text(source.name)
+                                                .font(.system(size: 10, weight: .bold))
+                                                .lineLimit(1)
+                                        }
+                                        .frame(width: 100, alignment: .leading)
+                                        .padding(.horizontal, 10)
+                                        .padding(.vertical, 10)
+                                        .background(.ultraThinMaterial)
+                                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 12)
+                                                .stroke(.white.opacity(0.1), lineWidth: 1)
+                                        )
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                            .padding(.vertical, 8)
                         }
                     }
                     
@@ -139,19 +188,6 @@ struct AddSubscriptionView: View {
                         .frame(minHeight: 100)
                 }
                 
-                if subscriptionToEdit != nil {
-                    Section {
-                        Button(role: .destructive) {
-                            deleteSubscription()
-                        } label: {
-                            HStack {
-                                Spacer()
-                                Text("Delete Subscription")
-                                Spacer()
-                            }
-                        }
-                    }
-                }
             }
             .navigationTitle(subscriptionToEdit == nil ? "New Subscription" : "Edit Subscription")
             .navigationBarTitleDisplayMode(.inline)
@@ -184,15 +220,20 @@ struct AddSubscriptionView: View {
                     startDate = sub.startDate
                     nextBillingDate = sub.nextBillingDate
                     notes = sub.notes ?? ""
+                    logoUrl = sub.logoUrl
+                    fullServiceName = sub.fullServiceName
+                    sourceId = sub.sourceId
                     
                     // Since we are loading existing, we don't want to trigger auto-updates immediately
                     isCategoryManual = true
                     isIconManual = true
                     isNextBillingManual = true
                 } else {
+                    currency = defaultCurrency
                     updateNextBillingDate()
                 }
             }
+
         }
     }
     
@@ -212,7 +253,40 @@ struct AddSubscriptionView: View {
             try? await Task.sleep(nanoseconds: 500_000_000) // 0.5s debounce
             guard !Task.isCancelled else { return }
             
-            await performPrediction(for: newValue)
+            async let prediction: Void = performPrediction(for: newValue)
+            async let sourcesSelection: Void = fetchSuggestedSources(for: newValue)
+            _ = await [prediction, sourcesSelection]
+        }
+    }
+    
+    private func fetchSuggestedSources(for query: String) async {
+        await MainActor.run { isLoadingSuggestions = true }
+        let foundSources = await PlanLookupService.shared.lookupSources(for: query)
+        await MainActor.run {
+            withAnimation {
+                suggestedSources = foundSources
+                isLoadingSuggestions = false
+            }
+        }
+    }
+    
+    private func selectSource(_ source: StreamingSource) {
+        withAnimation {
+            name = source.name
+            category = source.category
+            icon = source.defaultIcon
+            logoUrl = source.logoUrl
+            fullServiceName = source.name
+            sourceId = source.id
+            
+            // Mark as manual to prevent further auto-overwrites from prediction
+            isCategoryManual = true
+            isIconManual = true
+            
+            // Ensure icon is in the list
+            if !icons.contains(source.defaultIcon) {
+                icons.append(source.defaultIcon)
+            }
         }
     }
     
@@ -309,6 +383,9 @@ struct AddSubscriptionView: View {
             sub.frequency = frequency
             sub.category = category
             sub.icon = icon
+            sub.logoUrl = logoUrl
+            sub.fullServiceName = fullServiceName
+            sub.sourceId = sourceId
             sub.startDate = startDate
             sub.nextBillingDate = nextBillingDate
             sub.notes = notes.isEmpty ? nil : notes
@@ -320,6 +397,9 @@ struct AddSubscriptionView: View {
                 frequency: frequency,
                 category: category,
                 icon: icon,
+                logoUrl: logoUrl,
+                fullServiceName: fullServiceName,
+                sourceId: sourceId,
                 startDate: startDate,
                 nextBillingDate: nextBillingDate,
                 notes: notes.isEmpty ? nil : notes
@@ -329,12 +409,6 @@ struct AddSubscriptionView: View {
         dismiss()
     }
     
-    private func deleteSubscription() {
-        if let sub = subscriptionToEdit {
-            modelContext.delete(sub)
-        }
-        dismiss()
-    }
 }
 
 #Preview {
