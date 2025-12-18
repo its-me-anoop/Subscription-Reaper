@@ -201,11 +201,20 @@ struct AddSubscriptionView: View {
                     withAnimation { category = prediction.category }
                 }
                 if !isIconManual {
-                    // Update icon list if prediction is not in current list
-                    if !icons.contains(prediction.iconName) {
-                        icons.append(prediction.iconName)
+                    // Validate if the predicted SF Symbol actually exists
+                    #if canImport(UIKit)
+                    let symbolExists = UIImage(systemName: prediction.iconName) != nil
+                    #else
+                    let symbolExists = NSImage(systemName: prediction.iconName) != nil
+                    #endif
+                    
+                    if symbolExists {
+                        // Update icon list if prediction is not in current list
+                        if !icons.contains(prediction.iconName) {
+                            icons.append(prediction.iconName)
+                        }
+                        withAnimation { icon = prediction.iconName }
                     }
-                    withAnimation { icon = prediction.iconName }
                 }
             }
         } catch {
