@@ -72,13 +72,19 @@ struct ContentView: View {
                 }
             }
 
-            Tab("Settings", systemImage: "gearshape.fill", value: 2) {
+            Tab("Analysis", systemImage: "chart.pie.fill", value: 2) {
                 NavigationStack {
-                    SettingsView()
+                    AnalysisView()
                 }
             }
 
-            Tab("Search", systemImage: "magnifyingglass", value: 3, role: .search) {
+            Tab("Settings", systemImage: "gearshape.fill", value: 3) {
+                NavigationStack {
+                    SettingsView(selectedTab: $selectedTab)
+                }
+            }
+
+            Tab("Search", systemImage: "magnifyingglass", value: 4, role: .search) {
                 NavigationStack {
                     SubscriptionsListView(searchText: $searchText)
                         .toolbar {
